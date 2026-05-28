@@ -178,6 +178,19 @@
         });
     }
 
+    async function waitForAuthHeaders() {
+      for (var i = 0; i < 100; i++) {
+        if (typeof window.__getAuthHeaders === "function") {
+          var headers = await window.__getAuthHeaders();
+          if (headers && headers.Authorization) {
+            return headers;
+          }
+        }
+        await new Promise(function(resolve) { setTimeout(resolve, 100); });
+      }
+      return {};
+    }
+
     function openPdf() {
       if (!lastPdfData) return;
       var w = window.open();
@@ -338,10 +351,15 @@
       var stored = JSON.parse(sessionStorage.getItem("jl_selectedJob"));
       showModal("Cover Letter", '<div class="jd-modal-loading">Generating cover letter...</div>');
       resolveServerUrl().then(function() {
-      fetch(SERVER_URL + "/api/generate-cover-letter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: resumeText, jobDescription: stored.description, jobTitle: stored.title })
+      waitForAuthHeaders().then(function(authHeaders) {
+        if (!authHeaders.Authorization) {
+          console.warn("[Job Detail] Missing auth headers for cover letter request");
+        }
+        return fetch(SERVER_URL + "/api/generate-cover-letter", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders),
+          body: JSON.stringify({ resumeText: resumeText, jobDescription: stored.description, jobTitle: stored.title })
+        });
       })
       .then(function(r) {
         if (!r.ok) {
@@ -431,10 +449,15 @@
       var stored = JSON.parse(sessionStorage.getItem("jl_selectedJob"));
       showModal("Job Fit Resume", '<div class="jd-modal-loading">Generating tailored resume...</div>');
       resolveServerUrl().then(function() {
-      fetch(SERVER_URL + "/generate-job-specific-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText: resumeText, jobDescription: stored.description, jobTitle: stored.title })
+      waitForAuthHeaders().then(function(authHeaders) {
+        if (!authHeaders.Authorization) {
+          console.warn("[Job Detail] Missing auth headers for resume request");
+        }
+        return fetch(SERVER_URL + "/generate-job-specific-resume", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders),
+          body: JSON.stringify({ resumeText: resumeText, jobDescription: stored.description, jobTitle: stored.title })
+        });
       })
       .then(function(r) {
         if (!r.ok) {

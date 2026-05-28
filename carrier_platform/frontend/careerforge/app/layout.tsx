@@ -23,11 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      signInUrl="/"
-      signUpUrl="/"
-      afterSignOutUrl="/"
-    >
+    <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/">
       <html lang="en" className="dark">
         <body className={inter.className}>{children}</body>
       </html>

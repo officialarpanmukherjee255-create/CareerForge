@@ -77,6 +77,7 @@ const PLAN_FEATURES = {
 
 let clerk = null;
 let pendingFeaturePath = null;
+let usernamePromptInFlight = false;
 
 // Global auth helpers for feature pages
 window.__getAuthToken = async () => {
@@ -122,6 +123,70 @@ window.__getClerkUser = () => {
     imageUrl: clerk.user.imageUrl || "",
   };
 };
+
+async function promptForUsernameIfNeeded() {
+  if (!clerk || !clerk.isSignedIn || !clerk.user) return;
+  if (sessionStorage.getItem('cf_username_collected') === '1') return;
+  if ((clerk.user.username || '').trim()) return;
+  if (usernamePromptInFlight) return;
+
+  usernamePromptInFlight = true;
+  try {
+    const suggested = (
+      clerk.user.firstName ||
+      clerk.user.username ||
+      clerk.user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+      'user'
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_.-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'user';
+
+    let username = window.prompt('Choose a username to finish setting up your account:', suggested);
+    if (!username) return;
+
+    username = username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+    if (!username) {
+      alert('Please enter a valid username using letters, numbers, dots, underscores, or hyphens.');
+      return;
+    }
+
+    const headers = await window.__getAuthHeaders();
+    if (!headers.Authorization) throw new Error('No auth token available yet');
+
+    const user = window.__getClerkUser?.() || {};
+    const resp = await fetch(`${window.__getBackendUrlSync()}/api/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        email: user.email || clerk.user.primaryEmailAddress?.emailAddress || '',
+        username,
+        firstName: user.firstName || clerk.user.firstName || '',
+        lastName: user.lastName || clerk.user.lastName || '',
+      }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data?.success) {
+      throw new Error(data?.error || `Server error ${resp.status}`);
+    }
+
+    try {
+      await clerk.user.update?.({ username });
+    } catch (err) {
+      console.warn('[Auth] Clerk username update skipped:', err?.message || err);
+    }
+
+    sessionStorage.setItem('cf_username_collected', '1');
+    console.log('[Auth] Username collected:', username);
+  } catch (err) {
+    console.error('[Auth] Username onboarding failed:', err?.message || err);
+  } finally {
+    usernamePromptInFlight = false;
+  }
+}
 window.__getSavedResumes = async () => {
   const headers = await window.__getAuthHeaders();
   if (!headers.Authorization) return [];
@@ -752,6 +817,7 @@ function openAuthModal(view) {
       signInUrl: '/',
       afterSignInUrl: window.location.href,
       afterSignUpUrl: window.location.href,
+      oauthFlow: 'popup',
       appearance: clerkAppearance,
     });
   } else {
@@ -759,6 +825,7 @@ function openAuthModal(view) {
       signUpUrl: '/',
       afterSignInUrl: window.location.href,
       afterSignUpUrl: window.location.href,
+      oauthFlow: 'popup',
       appearance: clerkAppearance,
     });
   }
@@ -862,6 +929,8 @@ function updateAuthUI() {
       window.location.href = nextPath;
       return;
     }
+
+    promptForUsernameIfNeeded();
   } else {
     try {
       clerk.unmountUserButton(userButton);
@@ -872,6 +941,7 @@ function updateAuthUI() {
     profileLinks.forEach(el => el.style.display = 'none');
     loginBtns.forEach(el => el.style.display = 'inline-flex');
     registerBtns.forEach(el => el.style.display = 'inline-flex');
+    sessionStorage.removeItem('cf_username_collected');
   }
 
   updateFeatureAccess();
@@ -897,6 +967,7 @@ async function initClerk() {
 
   clerk.addListener(() => updateAuthUI());
   updateAuthUI();
+  promptForUsernameIfNeeded();
   if (typeof window.__resolveClerkReady === 'function') {
     window.__resolveClerkReady();
   }

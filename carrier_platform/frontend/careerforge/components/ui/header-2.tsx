@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useAuth, SignInButton, UserButton } from "@clerk/nextjs";
+import { useAuth, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/app/lib/utils";
 import { MenuToggleIcon } from "@/components/ui/menu-toggle-icon";
@@ -127,12 +127,12 @@ export function Header() {
               </>
             ) : (
               <>
-                <SignInButton mode="modal">
+                <SignInButton mode="modal" oauthFlow="popup">
                   <Button variant="outline">Sign In</Button>
                 </SignInButton>
-                <SignInButton mode="modal">
+                <SignUpButton mode="modal" oauthFlow="popup">
                   <Button>Get Started</Button>
-                </SignInButton>
+                </SignUpButton>
               </>
             )}
           </div>
@@ -171,12 +171,12 @@ export function Header() {
                 </a>
               ) : (
                 <>
-                  <SignInButton mode="modal">
+                  <SignInButton mode="modal" oauthFlow="popup">
                     <Button variant="outline" className="w-full">Sign In</Button>
                   </SignInButton>
-                  <SignInButton mode="modal">
+                  <SignUpButton mode="modal" oauthFlow="popup">
                     <Button className="w-full">Get Started</Button>
-                  </SignInButton>
+                  </SignUpButton>
                 </>
               )}
             </div>
