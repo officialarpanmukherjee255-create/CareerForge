@@ -3,6 +3,8 @@ import * as pdfjsLib from "/resume-analyzer/libs/pdf.mjs";
 const DEFAULT_SERVER_URL = "http://localhost:5000";
 let SERVER_URL = window.__SERVER_URL || DEFAULT_SERVER_URL;
 
+console.log("[Resume Analyzer] init started");
+
 async function resolveServerUrl() {
   if (typeof window.__resolveServerUrl === "function") {
     try {
@@ -158,36 +160,46 @@ function showUploadState(label) {
 }
 
 async function loadSavedResumes() {
-  await waitForResumeHelpers();
-  const resumes = await window.__getSavedResumes();
-  savedResumeSelect.innerHTML = "";
+  console.log("[Resume Analyzer] loading saved resumes");
+  try {
+    await waitForResumeHelpers();
+    const resumes = await window.__getSavedResumes();
+    savedResumeSelect.innerHTML = "";
 
-  if (!resumes.length) {
-    const option = document.createElement("option");
-    option.value = "";
-    option.textContent = "No saved resumes yet";
-    savedResumeSelect.appendChild(option);
-    savedResumeSelect.disabled = true;
-    savedResumeStatus.textContent = "No saved resumes yet.";
-    savedResumeHint.textContent = "Go to your Profile to save a resume, then return here.";
-    return;
+    if (!resumes.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No saved resumes yet";
+      savedResumeSelect.appendChild(option);
+      savedResumeSelect.disabled = true;
+      savedResumeStatus.textContent = "No saved resumes yet.";
+      savedResumeHint.textContent = "Go to your Profile to save a resume, then return here.";
+      return [];
+    }
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select a saved resume";
+    savedResumeSelect.appendChild(placeholder);
+
+    resumes.forEach((resume) => {
+      const option = document.createElement("option");
+      option.value = resume._id;
+      option.textContent = resume.title || "Untitled Resume";
+      savedResumeSelect.appendChild(option);
+    });
+
+    savedResumeSelect.disabled = false;
+    savedResumeStatus.textContent = "Pick one of your saved resumes.";
+    savedResumeHint.textContent = "Read-only selection. Nothing is written back to your Profile.";
+    console.log("[Resume Analyzer] saved resumes loaded:", resumes.length);
+    return resumes;
+  } catch (err) {
+    console.error("[Resume Analyzer] saved resume load failed:", err?.message || err);
+    if (savedResumeStatus) savedResumeStatus.textContent = "Unable to load saved resumes right now.";
+    if (savedResumeHint) savedResumeHint.textContent = err?.message || "Unknown error";
+    return [];
   }
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Select a saved resume";
-  savedResumeSelect.appendChild(placeholder);
-
-  resumes.forEach((resume) => {
-    const option = document.createElement("option");
-    option.value = resume._id;
-    option.textContent = resume.title || "Untitled Resume";
-    savedResumeSelect.appendChild(option);
-  });
-
-  savedResumeSelect.disabled = false;
-  savedResumeStatus.textContent = "Pick one of your saved resumes.";
-  savedResumeHint.textContent = "Read-only selection. Nothing is written back to your Profile.";
 }
 
 async function useSavedResume(resumeId) {
@@ -201,6 +213,7 @@ async function useSavedResume(resumeId) {
   }
 
   await waitForResumeHelpers();
+  console.log("[Resume Analyzer] saved resume selected:", resumeId);
   savedResumeStatus.textContent = "Loading saved resume...";
   const resumes = await window.__getSavedResumes();
   const selected = resumes.find((resume) => resume._id === resumeId);
@@ -226,6 +239,7 @@ async function useSavedResume(resumeId) {
 }
 
 btn.onclick = async function () {
+  console.log("[Resume Analyzer] analyze button clicked");
   if (!lastResumeText && !pdf.files?.[0] && !activeResumeBlob) {
     alert("please upload a file or choose a saved resume");
     return;
@@ -700,14 +714,14 @@ btn.onclick = async function () {
                 method: "POST",
                 headers: { "Content-Type": "application/json", ...authHeaders },
                 body: JSON.stringify({
-                                if (!resp.ok) {
-                                  console.error(`[Resume Analyzer] generate-job-specific-resume failed: ${resp.status} ${resp.statusText}`);
-                                }
                   resumeText: lastResumeText,
                   jobDescription: lastJobDesc,
                   jobTitle: lastJobTitle,
                 }),
               });
+              if (!resp.ok) {
+                console.error(`[Resume Analyzer] generate-job-specific-resume failed: ${resp.status} ${resp.statusText}`);
+              }
 
               if (window.__handlePlanLimitResponse && await window.__handlePlanLimitResponse(resp, "Job Fit Resume", "jobFitResume")) {
                 genBtn.disabled = false;
@@ -896,8 +910,11 @@ if (!bindDemoButtons()) {
   document.addEventListener("DOMContentLoaded", bindDemoButtons);
 }
 
+console.log("[Resume Analyzer] listeners attached");
+
 // ---------- INJECT FUNCTION ----------
 function injectDemoData(option) {
+  console.log("[Resume Analyzer] demo button clicked:", option);
   const jobTitleInput = document.getElementById("jobttl");
   const jobDescInput = document.getElementById("jobd");
 

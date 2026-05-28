@@ -204,9 +204,12 @@ async function bootstrap() {
   await resolveServerUrl();
   await loadAuth();
 
+  const categoryPromise = fetchJson(`${SERVER_URL}/api/leaderboard/categories`);
+  const mePromise = authHeaders.Authorization ? fetchJson(`${SERVER_URL}/api/leaderboard/me`) : Promise.resolve(null);
+
   // Load categories
   try {
-    const catData = await fetchJson(`${SERVER_URL}/api/leaderboard/categories`);
+    const catData = await categoryPromise;
     const categories = catData.categories || [];
     if (categories.length > 0) {
       activeCategory = categories[0].category;
@@ -220,8 +223,8 @@ async function bootstrap() {
   // Load user rankings if logged in
   try {
     if (authHeaders.Authorization) {
-      const meData = await fetchJson(`${SERVER_URL}/api/leaderboard/me`);
-      renderMyRankings(meData.rankings);
+      const meData = await mePromise;
+      if (meData) renderMyRankings(meData.rankings);
     }
   } catch (err) {
     console.error('Failed to load my rankings:', err);

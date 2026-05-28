@@ -74,12 +74,15 @@ async function refreshPlanDashboard(profile) {
 }
 
 async function loadProfile() {
+  console.log("[Profile] init start");
+  let rendered = false;
   const baseUrl = await resolveServerUrl();
   const headers = await window.__getAuthHeaders();
   if (!headers.Authorization) {
     console.warn("[Profile] No auth token found");
     document.getElementById("pfName").textContent = "Please sign in";
     document.getElementById("pfEmail").textContent = "Sign in to view your profile";
+    console.log("[Profile] loading state resolved: signed out");
     return;
   }
 
@@ -94,6 +97,7 @@ async function loadProfile() {
 
     if (data.success && data.profile) {
       renderProfile(data.profile);
+      rendered = true;
     } else {
       console.log("[Profile] No profile found, creating one...");
       const user = window.__getClerkUser();
@@ -103,19 +107,20 @@ async function loadProfile() {
           method: "POST",
           headers: { ...headers, "Content-Type": "application/json" },
           body: JSON.stringify({
-                    if (!createResp.ok) {
-                      console.error(`[Profile] POST /api/profile failed: ${createResp.status} ${createResp.statusText}`);
-                    }
             email: user.email,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
           }),
         });
+        if (!createResp.ok) {
+          console.error(`[Profile] POST /api/profile failed: ${createResp.status} ${createResp.statusText}`);
+        }
         const createData = await createResp.json();
         console.log("[Profile] POST response:", createData);
         if (createData.success) {
           renderProfile(createData.profile);
+          rendered = true;
         } else {
           document.getElementById("pfName").textContent = "Error creating profile";
           document.getElementById("pfEmail").textContent = createData.error || "Unknown error";
@@ -129,6 +134,15 @@ async function loadProfile() {
     console.error("[Profile] Load error:", err);
     document.getElementById("pfName").textContent = "Error loading profile";
     document.getElementById("pfEmail").textContent = err.message;
+  } finally {
+    const currentName = document.getElementById("pfName").textContent;
+    console.log("[Profile] loading state resolved:", { rendered, currentName });
+    if (document.getElementById("pfPlanPill").textContent === "Loading...") {
+      document.getElementById("pfPlanPill").textContent = "Unknown";
+    }
+    if (document.getElementById("pfPlanNote").textContent === "Loading your current plan and usage.") {
+      document.getElementById("pfPlanNote").textContent = "Plan data unavailable right now.";
+    }
   }
 }
 

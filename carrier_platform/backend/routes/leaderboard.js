@@ -36,11 +36,9 @@ function maskName(userName) {
 // GET /api/leaderboard/categories
 router.get("/categories", async (req, res) => {
   try {
-    const resumeCats = await ResumeRanking.aggregate([
-      { $group: { _id: "$category", count: { $sum: 1 } } }
-    ]);
-    const interviewCats = await InterviewRanking.aggregate([
-      { $group: { _id: "$category", count: { $sum: 1 } } }
+    const [resumeCats, interviewCats] = await Promise.all([
+      ResumeRanking.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]),
+      InterviewRanking.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]),
     ]);
 
     const catMap = {};
@@ -120,8 +118,10 @@ router.get("/me", clerkAuth, async (req, res) => {
 
     const userId = profile._id;
 
-    const resumeRankings = await ResumeRanking.find({ userId }).lean();
-    const interviewRankings = await InterviewRanking.find({ userId }).lean();
+    const [resumeRankings, interviewRankings] = await Promise.all([
+      ResumeRanking.find({ userId }).lean(),
+      InterviewRanking.find({ userId }).lean(),
+    ]);
 
     const allCategories = new Set();
     for (const r of resumeRankings) allCategories.add(r.category);
@@ -129,29 +129,35 @@ router.get("/me", clerkAuth, async (req, res) => {
 
     const results = [];
 
-    for (const category of allCategories) {
+    const categoryTasks = [...allCategories].map(async (category) => {
       const entry = { category, resumeRank: null, resumeScore: null, resumeTotal: null, interviewRank: null, interviewScore: null, interviewTotal: null };
 
       const rr = resumeRankings.find(r => r.category === category);
-      if (rr) {
-        const total = await ResumeRanking.countDocuments({ category });
-        const higher = await ResumeRanking.countDocuments({ category, resumeScore: { $gt: rr.resumeScore } });
-        entry.resumeRank = higher + 1;
-        entry.resumeScore = rr.resumeScore;
-        entry.resumeTotal = total;
-      }
-
       const ir = interviewRankings.find(r => r.category === category);
-      if (ir) {
-        const total = await InterviewRanking.countDocuments({ category });
-        const higher = await InterviewRanking.countDocuments({ category, interviewScore: { $gt: ir.interviewScore } });
-        entry.interviewRank = higher + 1;
-        entry.interviewScore = ir.interviewScore;
-        entry.interviewTotal = total;
+
+      const [resumeTotals, resumeHigher, interviewTotals, interviewHigher] = await Promise.all([
+        rr ? ResumeRanking.countDocuments({ category }) : Promise.resolve(null),
+        rr ? ResumeRanking.countDocuments({ category, resumeScore: { $gt: rr.resumeScore } }) : Promise.resolve(null),
+        ir ? InterviewRanking.countDocuments({ category }) : Promise.resolve(null),
+        ir ? InterviewRanking.countDocuments({ category, interviewScore: { $gt: ir.interviewScore } }) : Promise.resolve(null),
+      ]);
+
+      if (rr) {
+        entry.resumeRank = (resumeHigher || 0) + 1;
+        entry.resumeScore = rr.resumeScore;
+        entry.resumeTotal = resumeTotals;
       }
 
-      results.push(entry);
-    }
+      if (ir) {
+        entry.interviewRank = (interviewHigher || 0) + 1;
+        entry.interviewScore = ir.interviewScore;
+        entry.interviewTotal = interviewTotals;
+      }
+
+      return entry;
+    });
+
+    results.push(...await Promise.all(categoryTasks));
 
     res.json({ success: true, rankings: results });
   } catch (err) {

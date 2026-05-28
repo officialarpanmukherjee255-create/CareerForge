@@ -185,31 +185,45 @@ const PORT = process.env.PORT || 5000;
 const altacvCls = fs.readFileSync("../frontend/careerforge/public/resume-builder/altacv.cls", "utf8");
 
 // Middleware
-const allowedOrigin = process.env.FRONTEND_URL;
-const allowedOrigins = String(process.env.FRONTEND_URLS || "")
-  .split(",")
-  .map((item) => item.trim())
-  .filter(Boolean);
-const originRegex = /^https?:\/\/localhost(:\d+)?$/;
-const vercelRegex = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
-app.use(cors({
-  origin: function (origin, callback) {
-    if (
-      !origin ||
-      origin === allowedOrigin ||
-      allowedOrigins.includes(origin) ||
-      originRegex.test(origin) ||
-      vercelRegex.test(origin)
-    ) {
-      callback(null, true);
-    } else {
-      console.warn(`[CORS] Blocked origin: ${origin}`);
-      callback(null, false);
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Origin", "Accept"],
+  optionsSuccessStatus: 204,
+};
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin || "(no origin)";
+  if (req.method === "OPTIONS") {
+    console.log(`[CORS] Preflight ${req.method} ${req.originalUrl} origin=${origin}`);
+  } else {
+    console.log(`[CORS] Request ${req.method} ${req.originalUrl} origin=${origin}`);
+  }
+  next();
+});
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+app.use("/api", (req, res, next) => {
+  const origin = req.headers.origin || "(no origin)";
+  console.log(`[API CORS] ${req.method} ${req.originalUrl} origin=${origin}`);
+
+  if (req.headers.origin) {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+  }
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, Accept");
+  res.header("Vary", "Origin");
+
+  if (req.method === "OPTIONS") {
+    console.log(`[API CORS] Preflight handled for ${req.originalUrl}`);
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 app.use(express.json({ limit: "200mb" }));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 150 * 1024 * 1024 } });
 
@@ -2015,4 +2029,5 @@ app.listen(PORT, () => {
 ║   CORS Enabled for frontend on :3000     ║
 ╚═══════════════════════════════════════════╝
   `);
+  console.log("latest code");
 });
