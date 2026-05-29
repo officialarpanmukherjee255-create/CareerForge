@@ -135,7 +135,7 @@ export default function Home() {
                 <span className="text-sm font-mono text-white/60">AI-Powered Career Platform</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 leading-tight pb-6">
-                CareerForge
+                <span className="lowercase">CareerForge</span>
               </h1>
               <p className="mt-4 text-neutral-300 max-w-lg text-sm md:text-base">
                 An intelligent AI-powered career development ecosystem combining resume building, ATS optimization,

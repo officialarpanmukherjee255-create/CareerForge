@@ -68,14 +68,7 @@ export function Header() {
           )}
         >
          <a href="/" className="relative flex items-center">
-          <Image
-            src="/logo.png"
-            alt="CareerForge"
-            width={260}
-            height={260}
-            className="absolute top-1/2 left-0 h-32 w-auto -translate-y-1/2 object-contain pt-2 pb-2"
-            priority
-          />
+          <span className="font-extrabold text-lg tracking-tight">CareerForge</span>
 
           {/* spacing so text/navbar doesn't overlap */}
           <div className="w-28" />

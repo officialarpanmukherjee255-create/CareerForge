@@ -277,8 +277,8 @@ function shellMarkup(activeKey) {
     <header class="cf-shell-nav">
       <nav class="cf-shell-inner">
         <a class="cf-shell-brand" href="/" style="position:relative;display:flex;align-items:center;">
-          <img src="/logo.png" alt="CareerForge" style="position:absolute;top:50%;left:0;height:64px;width:auto;transform:translateY(-50%);object-fit:contain;padding-top:2px;" />
-          <div style="width:60px;"></div>
+          <span style="font-weight:700;font-size:20px;letter-spacing:0.2px;">CareerForge</span>
+          <div style="width:112px;"></div>
         </a>
         <div class="cf-shell-links" id="cf-shell-links">${navLinks}</div>
         <div class="cf-shell-actions" id="cf-shell-actions">
@@ -369,10 +369,10 @@ function footerMarkup() {
     <footer class="cf-shell-footer">
       <div class="cf-shell-footer-inner">
         <div class="cf-shell-footer-brand-block">
-          <a class="cf-shell-footer-brand" href="/">
-            <span>CareerForge</span>
-          </a>
-          <p class="cf-shell-footer-copy">AI-powered career development ecosystem. Build, analyze, and optimize your career journey.</p>
+            <a class="cf-shell-footer-brand" href="/">
+              <span style="display:flex;align-items:center;gap:8px;"><span style="font-weight:700;">CareerForge</span></span>
+            </a>
+            <p class="cf-shell-footer-copy">AI-powered career development ecosystem. Build, analyze, and optimize your career journey.</p>
         </div>
         <div class="cf-shell-footer-grid">
           <div class="cf-shell-footer-column">
