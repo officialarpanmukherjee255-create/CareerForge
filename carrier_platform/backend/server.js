@@ -179,7 +179,7 @@ async function resolveJobListingAccess(req) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 0;
 
 // Load altacv.cls once at startup (lives in careerforge/public/resume-builder/)
 const altacvCls = fs.readFileSync("../frontend/careerforge/public/resume-builder/altacv.cls", "utf8");
@@ -2017,17 +2017,19 @@ app.get("/api/health", (req, res) => {
   const minutes = Math.floor((uptime % 3600) / 60);
   const seconds = uptime % 60;
   const uptimeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  res.json({ status: "Server is running", port: PORT, uptime: uptimeStr, uptimeSeconds: uptime });
+  const activePort = server?.address?.()?.port || PORT;
+  res.json({ status: "Server is running", port: activePort, uptime: uptimeStr, uptimeSeconds: uptime });
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
+  const activePort = server.address().port;
   console.log(`
 ╔═══════════════════════════════════════════╗
 ║   AI Mock Interview Backend Server       ║
-║   Running on http://localhost:${PORT}      ║
+║   Running on http://localhost:${activePort}      ║
 ║   CORS Enabled for frontend on :3000     ║
 ╚═══════════════════════════════════════════╝
   `);
-  console.log("latest code1");
+  console.log("latest code2");
 });
